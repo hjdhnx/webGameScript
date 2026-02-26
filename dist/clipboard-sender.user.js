@@ -1256,8 +1256,20 @@
 
         function show(title, html) {
             ensure();
+            // 如果只传了一个参数，且是字符串，那么它应该是内容，标题默认为"通知"
+            if (html === undefined && typeof title === 'string') {
+                html = title;
+                title = '通知';
+            }
+            
             titleEl.textContent = title || '通知';
-            if (typeof html === 'string') content.innerHTML = html; else {
+            
+            if (html === undefined || html === null) {
+                content.innerHTML = '';
+            } else if (typeof html === 'string') {
+                // 处理换行符，将其转换为 <br>
+                content.innerHTML = html.replace(/\n/g, '<br>');
+            } else {
                 content.innerHTML = '';
                 content.append(html);
             }
@@ -4661,7 +4673,7 @@
             overlay.addEventListener('mousedown', handleClick);
             
             document.body.appendChild(overlay);
-            Toast.show('请点击屏幕任意位置获取坐标\n右键取消', 'info');
+            Toast.show('提示', '请点击屏幕任意位置获取坐标\n右键取消');
         }
 
         function stop() {
@@ -4676,7 +4688,7 @@
         function cancel(e) {
             e.preventDefault();
             stop();
-            Toast.show('已取消坐标拾取');
+            Toast.show('提示', '已取消坐标拾取');
         }
 
         function handleClick(e) {
@@ -4697,7 +4709,7 @@
                 });
             }
             
-            Toast.show(`坐标: ${x}, ${y}\n已复制代码: ${code}`, 'success');
+            Toast.show('拾取成功', `坐标: ${x}, ${y}\n已复制代码: ${code}`);
             console.log(`[CoordinatePicker] Picked: ${x}, ${y}`);
             
             stop();
@@ -4740,7 +4752,7 @@
             overlay.addEventListener('mousemove', handleMouseMove);
             
             document.body.appendChild(overlay);
-            Toast.show('请点击选择输入框或其他元素\n移动鼠标预览，右键取消', 'info');
+            Toast.show('提示', '请点击选择输入框或其他元素\n移动鼠标预览，右键取消');
         }
 
         function stop() {
@@ -4761,7 +4773,7 @@
         function cancel(e) {
             e.preventDefault();
             stop();
-            Toast.show('已取消元素拾取', 'info');
+            Toast.show('提示', '已取消元素拾取');
         }
 
         function handleMouseMove(e) {
@@ -4812,16 +4824,16 @@
                 const success = copyWithGreasemonkey(code);
                 
                 if (success) {
-                    Toast.show(`已拾取元素: ${selector}\n代码已复制: ${code}`, 'success');
+                    Toast.show('拾取成功', `已拾取元素: ${selector}\n代码已复制: ${code}`);
                 } else {
-                    Toast.show(`拾取成功: ${selector}\n复制失败，请手动复制控制台输出`, 'warning');
+                    Toast.show('拾取成功', `拾取成功: ${selector}\n复制失败，请手动复制控制台输出`);
                 }
                 
                 console.log(`[ElementPicker] Picked:`, highlightedElement);
                 console.log(`[ElementPicker] Selector: ${selector}`);
                 console.log(`[ElementPicker] Code: ${code}`);
             } else {
-                 Toast.show('未选中任何元素', 'warning');
+                 Toast.show('提示', '未选中任何元素');
             }
             
             stop();

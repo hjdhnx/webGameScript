@@ -37,7 +37,7 @@ export const ElementPicker = (() => {
         overlay.addEventListener('mousemove', handleMouseMove);
         
         document.body.appendChild(overlay);
-        Toast.show('请点击选择输入框或其他元素\n移动鼠标预览，右键取消', 'info');
+        Toast.show('提示', '请点击选择输入框或其他元素\n移动鼠标预览，右键取消');
     }
 
     function stop() {
@@ -58,7 +58,7 @@ export const ElementPicker = (() => {
     function cancel(e) {
         e.preventDefault();
         stop();
-        Toast.show('已取消元素拾取', 'info');
+        Toast.show('提示', '已取消元素拾取');
     }
 
     function handleMouseMove(e) {
@@ -109,16 +109,16 @@ export const ElementPicker = (() => {
             const success = copyWithGreasemonkey(code);
             
             if (success) {
-                Toast.show(`已拾取元素: ${selector}\n代码已复制: ${code}`, 'success');
+                Toast.show('拾取成功', `已拾取元素: ${selector}\n代码已复制: ${code}`);
             } else {
-                Toast.show(`拾取成功: ${selector}\n复制失败，请手动复制控制台输出`, 'warning');
+                Toast.show('拾取成功', `拾取成功: ${selector}\n复制失败，请手动复制控制台输出`);
             }
             
             console.log(`[ElementPicker] Picked:`, highlightedElement);
             console.log(`[ElementPicker] Selector: ${selector}`);
             console.log(`[ElementPicker] Code: ${code}`);
         } else {
-             Toast.show('未选中任何元素', 'warning');
+             Toast.show('提示', '未选中任何元素');
         }
         
         stop();

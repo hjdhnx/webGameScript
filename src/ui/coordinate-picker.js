@@ -34,7 +34,7 @@ export const CoordinatePicker = (() => {
         overlay.addEventListener('mousedown', handleClick);
         
         document.body.appendChild(overlay);
-        Toast.show('请点击屏幕任意位置获取坐标\n右键取消', 'info');
+        Toast.show('提示', '请点击屏幕任意位置获取坐标\n右键取消');
     }
 
     function stop() {
@@ -49,7 +49,7 @@ export const CoordinatePicker = (() => {
     function cancel(e) {
         e.preventDefault();
         stop();
-        Toast.show('已取消坐标拾取');
+        Toast.show('提示', '已取消坐标拾取');
     }
 
     function handleClick(e) {
@@ -70,7 +70,7 @@ export const CoordinatePicker = (() => {
             });
         }
         
-        Toast.show(`坐标: ${x}, ${y}\n已复制代码: ${code}`, 'success');
+        Toast.show('拾取成功', `坐标: ${x}, ${y}\n已复制代码: ${code}`);
         console.log(`[CoordinatePicker] Picked: ${x}, ${y}`);
         
         stop();

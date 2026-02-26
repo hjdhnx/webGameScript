@@ -201,8 +201,20 @@ export const Toast = (() => {
 
     function show(title, html) {
         ensure();
+        // 如果只传了一个参数，且是字符串，那么它应该是内容，标题默认为"通知"
+        if (html === undefined && typeof title === 'string') {
+            html = title;
+            title = '通知';
+        }
+        
         titleEl.textContent = title || '通知';
-        if (typeof html === 'string') content.innerHTML = html; else {
+        
+        if (html === undefined || html === null) {
+            content.innerHTML = '';
+        } else if (typeof html === 'string') {
+            // 处理换行符，将其转换为 <br>
+            content.innerHTML = html.replace(/\n/g, '<br>');
+        } else {
             content.innerHTML = '';
             content.append(html);
         }
