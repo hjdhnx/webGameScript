@@ -105,6 +105,9 @@ e:\gitwork\webGameScript\
 - `await click(x, y)`: 模拟鼠标点击（同时触发 PointerEvent 和 MouseEvent，适配大多数 H5 游戏）。
 - `await sleep(ms)`: 睡眠指定毫秒数。
 - `await inputText(text, target)`: 输入文本。`target` 可选，支持选择器字符串或 DOM 元素；如果不传，则向当前聚焦元素输入。
+- `await scroll(x, y)`: 滚动页面（相对当前位置）。使用 `absolute: true` 可滚动到绝对位置。
+- `await scrollToBottom()`: 滚动到底部。
+- `await scrollToTop()`: 滚动到顶部。
 - `clickbtn(text)`: 点击包含指定文本的按钮/链接。
 - `clickhref(text)`: 点击包含指定文本的 `<a>` 标签。
 - `clickgo(selector)`: 点击匹配 CSS 选择器的元素。
@@ -131,6 +134,12 @@ await click(500, 600); // 假设这是输入框坐标
 await sleep(500); // 等待聚焦
 await inputText('Hello World'); // 输入文本
 await click(700, 800); // 点击提交按钮
+
+// 滚动页面到底部查看结果
+await scrollToBottom();
+await sleep(1000);
+// 向上滚动一点
+await scroll(0, -200);
 
 console.log('任务完成！');
 Toast.show('任务完成！');

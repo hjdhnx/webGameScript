@@ -1475,6 +1475,10 @@
                 click: window.click,
                 sleep: window.sleep,
                 inputText: window.inputText,
+                scroll: window.scroll,
+                scrollToBottom: window.scrollToBottom,
+                scrollToTop: window.scrollToTop,
+                scrollIntoView: window.scrollIntoView,
                 clickbtn: window.clickbtn,
                 clickhref: window.clickhref,
                 clickgo: window.clickgo,
@@ -2370,6 +2374,8 @@
             { name: '点击(click)', code: 'await click(100, 100);' },
             { name: '睡眠(sleep)', code: 'await sleep(1000);' },
             { name: '输入(inputText)', code: "await inputText('内容', '#target');" },
+            { name: '滚动(scroll)', code: "await scroll(0, 100);" },
+            { name: '滚动到底部', code: "await scrollToBottom();" },
             { name: '点击按钮(clickbtn)', code: "clickbtn('按钮文本');" },
             { name: '点击链接(clickhref)', code: "clickhref('链接文本');" },
             { name: '点击选择器(clickgo)', code: "clickgo('.css-selector');" },
@@ -4829,6 +4835,30 @@
         return { start, stop };
     })();
 
+    /**
+     * 切换页面灰度模式 (默哀模式)
+     * @param {boolean} enable - 是否开启
+     */
+    function setGrayMode(enable) {
+        const html = document.documentElement;
+        if (enable) {
+            html.style.filter = 'grayscale(100%)';
+            html.style.webkitFilter = 'grayscale(100%)';
+        } else {
+            html.style.filter = '';
+            html.style.webkitFilter = '';
+        }
+    }
+
+    /**
+     * 初始化灰度模式
+     * 在脚本启动时调用，检查存储状态并应用
+     */
+    function initGrayMode() {
+        const enabled = store.get('gray_mode_enabled', 0) === 1;
+        setGrayMode(enabled);
+    }
+
     function toggleLog() {
         // 使用store中的状态作为主要判断依据，DOM状态作为备用
         const storedHidden = store.get('logger.hidden', 0) === 1;
@@ -5017,7 +5047,16 @@
         };
     }
 
-    function makeToggle(id, openLabel, closeLabel, storeKey) {
+    /**
+     * 创建通用切换开关处理器
+     * @param {string} id - 按钮ID
+     * @param {string} openLabel - 开启时的标签
+     * @param {string} closeLabel - 关闭时的标签
+     * @param {string} storeKey - 存储键名
+     * @param {Function} [onChange] - 状态改变时的回调函数 (newValue) => void
+     * @returns {Function} 处理器函数
+     */
+    function makeToggle(id, openLabel, closeLabel, storeKey, onChange) {
         return (activeOrBtn, maybeBtn) => {
             // 兼容两种调用方式：
             // 1) group popup calls handler(active, btn) -> active is boolean, maybeBtn is btn
@@ -5029,7 +5068,12 @@
                 store.set(storeKey, active ? 1 : 0);
                 // update text if btn provided
                 if (btn) btn.innerText = active ? closeLabel : openLabel;
-                console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
+                
+                if (onChange) {
+                    onChange(active);
+                } else {
+                    console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
+                }
             } else {
                 // called as handler(btn) from column (rare for these toggles) - just toggle state
                 const btn = activeOrBtn;
@@ -5040,7 +5084,12 @@
                     btn.innerText = will ? closeLabel : openLabel;
                     btn.style.borderStyle = will ? 'inset' : 'outset';
                 }
-                console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
+                
+                if (onChange) {
+                    onChange(will);
+                } else {
+                    console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
+                }
             }
         };
     }
@@ -5098,6 +5147,12 @@
 
     function pickElement() {
         ElementPicker.start();
+    }
+
+    function toggleGrayMode(enable) {
+        setGrayMode(enable);
+        const label = enable ? '开灰度' : '关灰度';
+        Logger.append(`[开关集] ${label}`);
     }
 
     async function configSafeCode() {
@@ -5353,6 +5408,161 @@
         return true;
     }
 
+    /**
+     * UI Protector
+     * 监控脚本UI元素，防止被网页本身的操作（如 document.body.innerHTML 重写）清除。
+     * 如果发现 UI 被清除，尝试重新初始化。
+     */
+    const UIProtector = (() => {
+        let checkInterval = null;
+        let initFunction = null;
+
+        /**
+         * 启动保护
+         * @param {Function} initFn - 初始化函数，当检测到 UI 丢失时调用此函数重建 UI
+         */
+        function start(initFn) {
+            if (checkInterval) clearInterval(checkInterval);
+            initFunction = initFn;
+
+            // 每 2 秒检查一次核心 UI 元素是否存在
+            checkInterval = setInterval(check, 2000);
+            console.log('[UIProtector] UI 保护已启动');
+        }
+
+        function check() {
+            // 检查第1列容器是否存在
+            // 我们的 UI 列是通过 Columns 类创建的，通常直接挂载在 body 下
+            // 我们可以检查是否存在包含 data-tmx-ui 属性的元素，或者特定的列容器
+            
+            // 简单策略：检查是否还有我们的列容器
+            // Columns 类创建的 div 通常没有特定的 ID，但我们可以检查是否有任何脚本创建的 UI
+            // 注意：某些情况下，可能所有 UI 都被移除了，但也可能只是部分被移除
+            // 这里我们检查最基础的列容器（Columns创建的div也有 data-tmx-ui 属性）
+            const uiExists = document.querySelector('[data-tmx-ui="true"]');
+
+            if (!uiExists) {
+                console.warn('[UIProtector] 检测到 UI 丢失，正在尝试重新加载...');
+                
+                // 尝试重新执行初始化
+                if (typeof initFunction === 'function') {
+                    try {
+                        initFunction();
+                        // 重新挂载 Logger，因为 Logger 的 DOM 也可能丢失了
+                        Logger.hook(); 
+                        Logger.append('[UIProtector] UI 丢失，已尝试恢复');
+                    } catch (e) {
+                        console.error('[UIProtector] 重新加载失败:', e);
+                    }
+                }
+            }
+        }
+
+        function stop() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+                checkInterval = null;
+            }
+        }
+
+        return { start, stop };
+    })();
+
+    /**
+     * 滚动页面
+     * @param {number} x - 水平滚动距离或坐标
+     * @param {number} y - 垂直滚动距离或坐标
+     * @param {Object} [options] - 选项
+     * @param {boolean} [options.absolute=false] - 是否为绝对坐标，false 为相对滚动
+     * @param {string} [options.behavior='smooth'] - 滚动行为: 'auto' | 'instant' | 'smooth'
+     * @param {string|HTMLElement} [options.target=window] - 滚动目标，默认 window，可选元素选择器或对象
+     */
+    async function scroll(x, y, options = {}) {
+        const { absolute = false, behavior = 'smooth', target = window } = options;
+        
+        let el = target;
+        if (typeof target === 'string') {
+            el = document.querySelector(target);
+        }
+        
+        if (!el) {
+            console.warn('[Scroll] 未找到滚动目标:', target);
+            return;
+        }
+
+        const scrollOptions = {
+            behavior: behavior
+        };
+
+        if (absolute) {
+            scrollOptions.left = x;
+            scrollOptions.top = y;
+            el.scrollTo(scrollOptions);
+        } else {
+            scrollOptions.left = x;
+            scrollOptions.top = y;
+            el.scrollBy(scrollOptions);
+        }
+        
+        // 如果是平滑滚动，等待一段时间
+        if (behavior === 'smooth') {
+            // 估算滚动时间，或者固定等待
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    /**
+     * 滚动到底部
+     * @param {Object} options - 选项，同 scroll
+     */
+    async function scrollToBottom(options = {}) {
+        const { target = window, behavior = 'smooth' } = options;
+        let el = target;
+        if (typeof target === 'string') {
+            el = document.querySelector(target);
+        }
+
+        if (!el) return;
+
+        if (el === window) {
+            const y = document.body.scrollHeight;
+            await scroll(0, y, { ...options, absolute: true });
+        } else {
+            const y = el.scrollHeight;
+            await scroll(0, y, { ...options, absolute: true });
+        }
+    }
+
+    /**
+     * 滚动到顶部
+     * @param {Object} options - 选项，同 scroll
+     */
+    async function scrollToTop(options = {}) {
+        await scroll(0, 0, { ...options, absolute: true });
+    }
+
+    /**
+     * 滚动元素到可视区域
+     * @param {string|HTMLElement} selector - 元素选择器或对象
+     * @param {string} [behavior='smooth'] - 滚动行为
+     * @param {string} [block='center'] - 垂直对齐方式: 'start', 'center', 'end', 'nearest'
+     */
+    async function scrollIntoView(selector, behavior = 'smooth', block = 'center') {
+        let el = selector;
+        if (typeof selector === 'string') {
+            el = document.querySelector(selector);
+        }
+        
+        if (el) {
+            el.scrollIntoView({ behavior, block });
+            if (behavior === 'smooth') {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        } else {
+            console.warn('[Scroll] 未找到目标元素:', selector);
+        }
+    }
+
     // Define Actions
     const ACTIONS = [
         // 第1列：隐藏日志、显按钮
@@ -5394,6 +5604,14 @@
         { id: 'js', label: '开救赎', group: '开关集', handler: noop('开救赎') },
         { id: 'zx', label: '开智悬', group: '开关集', handler: noop('开智悬') },
         { id: 'zxs', label: '设智悬', group: '开关集', handler: noop('设智悬') },
+        {
+            id: 'gray-mode',
+            label: '开灰度',
+            group: '开关集',
+            isToggle: true,
+            storeKey: 'gray_mode_enabled',
+            handler: makeToggle('gray-mode', '开灰度', '关灰度', 'gray_mode_enabled', (enabled) => toggleGrayMode(enabled))
+        },
 
         // 分组：配置集
         {
@@ -5534,8 +5752,12 @@
         window.click = simulateClick;
         window.sleep = sleep;
         window.inputText = inputText;
+        window.scroll = scroll;
+        window.scrollToBottom = scrollToBottom;
+        window.scrollToTop = scrollToTop;
+        window.scrollIntoView = scrollIntoView;
         window.copyWithGreasemonkey = copyWithGreasemonkey;
-        console.log('[便捷函数] clickbtn、clickhref、clickgo、click、sleep、inputText、copyWithGreasemonkey 已挂载到全局，可在控制台直接使用');
+        console.log('[便捷函数] clickbtn、clickhref、clickgo、click、sleep、inputText、scroll、copyWithGreasemonkey 已挂载到全局，可在控制台直接使用');
 
         Theme.apply();
         Logger.hook();
@@ -5550,6 +5772,21 @@
         render();
         Dialog.initialize();
         Dialog.applyTheme();
+        initGrayMode(); // 初始化灰度模式
+        
+        // 启动 UI 保护，传入 render 函数作为重建方法
+        UIProtector.start(() => {
+            // 清理旧的引用（如果需要的话，Columns 等类可能需要 reset 方法，这里暂且假设重新 render 即可覆盖或添加）
+            // 但更稳妥的方式是确保 render 是幂等的，或者在 render 前清理
+            // 简单起见，这里直接调用 render，因为它会检查 ensure(index) 是否已存在
+            // 但如果 DOM 被清除了，Columns 中的 map 引用可能还在，导致不会重新创建
+            
+            // 我们需要重置核心状态以便重新渲染
+            setColumns(new Columns());
+            render();
+            Theme.apply(); // 重新应用主题
+            Logger.show(); // 确保日志重新显示（如果之前是显示的）
+        });
         
         // 将DebugWindowManager和Toast暴露到全局，供相互调用
         window.DebugWindow = DebugWindowManager;

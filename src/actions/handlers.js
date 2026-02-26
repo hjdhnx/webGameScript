@@ -13,6 +13,7 @@ import { DebugWindowManager } from '../core/debug-window.js';
 import { syncRemoteCommands } from '../core/remote-sync.js';
 import { CoordinatePicker } from '../ui/coordinate-picker.js';
 import { ElementPicker } from '../ui/element-picker.js';
+import { setGrayMode } from './gray-mode.js';
 
 export function toggleLog() {
     // 使用store中的状态作为主要判断依据，DOM状态作为备用
@@ -202,7 +203,16 @@ export function toggleGroup(name) {
     };
 }
 
-export function makeToggle(id, openLabel, closeLabel, storeKey) {
+/**
+ * 创建通用切换开关处理器
+ * @param {string} id - 按钮ID
+ * @param {string} openLabel - 开启时的标签
+ * @param {string} closeLabel - 关闭时的标签
+ * @param {string} storeKey - 存储键名
+ * @param {Function} [onChange] - 状态改变时的回调函数 (newValue) => void
+ * @returns {Function} 处理器函数
+ */
+export function makeToggle(id, openLabel, closeLabel, storeKey, onChange) {
     return (activeOrBtn, maybeBtn) => {
         // 兼容两种调用方式：
         // 1) group popup calls handler(active, btn) -> active is boolean, maybeBtn is btn
@@ -214,7 +224,12 @@ export function makeToggle(id, openLabel, closeLabel, storeKey) {
             store.set(storeKey, active ? 1 : 0);
             // update text if btn provided
             if (btn) btn.innerText = active ? closeLabel : openLabel;
-            console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
+            
+            if (onChange) {
+                onChange(active);
+            } else {
+                console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
+            }
         } else {
             // called as handler(btn) from column (rare for these toggles) - just toggle state
             const btn = activeOrBtn;
@@ -225,7 +240,12 @@ export function makeToggle(id, openLabel, closeLabel, storeKey) {
                 btn.innerText = will ? closeLabel : openLabel;
                 btn.style.borderStyle = will ? 'inset' : 'outset';
             }
-            console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
+            
+            if (onChange) {
+                onChange(will);
+            } else {
+                console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
+            }
         }
     };
 }
@@ -283,6 +303,12 @@ export function pickCoordinate() {
 
 export function pickElement() {
     ElementPicker.start();
+}
+
+export function toggleGrayMode(enable) {
+    setGrayMode(enable);
+    const label = enable ? '开灰度' : '关灰度';
+    Logger.append(`[开关集] ${label}`);
 }
 
 export async function configSafeCode() {

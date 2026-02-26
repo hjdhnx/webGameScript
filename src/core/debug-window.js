@@ -590,6 +590,8 @@ export const DebugWindowManager = (() => {
         { name: '点击(click)', code: 'await click(100, 100);' },
         { name: '睡眠(sleep)', code: 'await sleep(1000);' },
         { name: '输入(inputText)', code: "await inputText('内容', '#target');" },
+        { name: '滚动(scroll)', code: "await scroll(0, 100);" },
+        { name: '滚动到底部', code: "await scrollToBottom();" },
         { name: '点击按钮(clickbtn)', code: "clickbtn('按钮文本');" },
         { name: '点击链接(clickhref)', code: "clickhref('链接文本');" },
         { name: '点击选择器(clickgo)', code: "clickgo('.css-selector');" },

@@ -17,6 +17,9 @@ import { clickbtn, clickhref, clickgo, copyWithGreasemonkey } from './utils/debu
 import { simulateClick } from './utils/mouse.js';
 import { sleep } from './utils/time.js';
 import { inputText } from './utils/input.js';
+import { UIProtector } from './core/ui-protector.js';
+import { scroll, scrollToBottom, scrollToTop, scrollIntoView } from './utils/scroll.js';
+import { initGrayMode } from './actions/gray-mode.js';
 
 // Define Actions
 const ACTIONS = [
@@ -59,6 +62,14 @@ const ACTIONS = [
     { id: 'js', label: '开救赎', group: '开关集', handler: Handlers.noop('开救赎') },
     { id: 'zx', label: '开智悬', group: '开关集', handler: Handlers.noop('开智悬') },
     { id: 'zxs', label: '设智悬', group: '开关集', handler: Handlers.noop('设智悬') },
+    {
+        id: 'gray-mode',
+        label: '开灰度',
+        group: '开关集',
+        isToggle: true,
+        storeKey: 'gray_mode_enabled',
+        handler: Handlers.makeToggle('gray-mode', '开灰度', '关灰度', 'gray_mode_enabled', (enabled) => Handlers.toggleGrayMode(enabled))
+    },
 
     // 分组：配置集
     {
@@ -199,8 +210,12 @@ function init() {
     window.click = simulateClick;
     window.sleep = sleep;
     window.inputText = inputText;
+    window.scroll = scroll;
+    window.scrollToBottom = scrollToBottom;
+    window.scrollToTop = scrollToTop;
+    window.scrollIntoView = scrollIntoView;
     window.copyWithGreasemonkey = copyWithGreasemonkey;
-    console.log('[便捷函数] clickbtn、clickhref、clickgo、click、sleep、inputText、copyWithGreasemonkey 已挂载到全局，可在控制台直接使用');
+    console.log('[便捷函数] clickbtn、clickhref、clickgo、click、sleep、inputText、scroll、copyWithGreasemonkey 已挂载到全局，可在控制台直接使用');
 
     Theme.apply();
     Logger.hook();
@@ -215,6 +230,21 @@ function init() {
     render();
     Dialog.initialize();
     Dialog.applyTheme();
+    initGrayMode(); // 初始化灰度模式
+    
+    // 启动 UI 保护，传入 render 函数作为重建方法
+    UIProtector.start(() => {
+        // 清理旧的引用（如果需要的话，Columns 等类可能需要 reset 方法，这里暂且假设重新 render 即可覆盖或添加）
+        // 但更稳妥的方式是确保 render 是幂等的，或者在 render 前清理
+        // 简单起见，这里直接调用 render，因为它会检查 ensure(index) 是否已存在
+        // 但如果 DOM 被清除了，Columns 中的 map 引用可能还在，导致不会重新创建
+        
+        // 我们需要重置核心状态以便重新渲染
+        setColumns(new Columns());
+        render();
+        Theme.apply(); // 重新应用主题
+        Logger.show(); // 确保日志重新显示（如果之前是显示的）
+    });
     
     // 将DebugWindowManager和Toast暴露到全局，供相互调用
     window.DebugWindow = DebugWindowManager;
