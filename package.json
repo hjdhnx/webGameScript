@@ -1,0 +1,19 @@
+{
+  "name": "webgamescript-refactor",
+  "version": "2.0.2",
+  "description": "Refactored Userscript Framework",
+  "main": "dist/clipboard-sender.user.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  },
+  "author": "taoist (refactor by chatgpt)",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-terser": "^0.4.0",
+    "rollup": "^4.0.0"
+  }
+}
