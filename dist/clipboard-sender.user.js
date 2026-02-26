@@ -611,13 +611,40 @@
                 // read initial state from store
                 let active = store.get(options.storeKey, 0) === 1;
                 btn.style.borderStyle = active ? 'inset' : 'outset';
+                
+                // 如果是开关，且初始为开启状态，尝试更新按钮文本
+                // 注意：这里我们假设 label 格式为 "开XX"，开启后变为 "关XX"
+                // 或者更通用的做法是，handler 内部会根据 store 状态更新文本，
+                // 但这里是初始化，handler 还没执行。
+                // 实际上，makeToggle 生成的 handler 已经处理了点击后的文本更新。
+                // 问题的关键在于：页面刷新加载时，按钮文本是初始传入的 label（通常是"开XX"），
+                // 但如果 store 里状态是 1（已开启），按钮应该是"关XX"。
+                
+                if (active && label.startsWith('开')) {
+                    btn.textContent = label.replace('开', '关');
+                }
+
                 // click toggles state, calls handler with (active, btn)
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    active = !active;
-                    btn.style.borderStyle = active ? 'inset' : 'outset';
+                    // 注意：这里的 active 变量是闭包内的局部变量，
+                    // 但 makeToggle 内部也会读取 store。
+                    // 为了避免状态不一致，最好重新从 store 读取，或者让 handler 负责更新状态。
+                    // 现在的逻辑是：点击 -> active取反 -> 更新样式 -> 调用handler -> handler更新store
+                    
+                    // 修正：点击时，active 应该是取反后的值
+                    // 但 makeToggle 的逻辑是：读取 store -> 取反 -> 保存 store -> 更新 UI
+                    // 所以这里我们只需要调用 handler 即可，handler 会处理一切
+                    // 不过 handler 需要知道当前按钮元素，以便更新文本
+                    
                     try {
-                        handler(active, btn);
+                        // 传递 btn 给 handler，handler (makeToggle返回的函数) 会处理状态切换和UI更新
+                        handler(btn);
+                        
+                        // 更新闭包内的 active 状态，以便下次点击逻辑正确（虽然 makeToggle 内部主要依赖 store）
+                        // 重新读取 store 以确保同步
+                        active = store.get(options.storeKey, 0) === 1;
+                        btn.style.borderStyle = active ? 'inset' : 'outset';
                     } catch (err) {
                         console.error(err);
                     }
@@ -5058,38 +5085,40 @@
      */
     function makeToggle(id, openLabel, closeLabel, storeKey, onChange) {
         return (activeOrBtn, maybeBtn) => {
-            // 兼容两种调用方式：
-            // 1) group popup calls handler(active, btn) -> active is boolean, maybeBtn is btn
-            // 2) column button calls handler(btn) -> activeOrBtn is btn
+            let btn = null;
+            let isActive = false;
+            
             if (typeof activeOrBtn === 'boolean') {
-                const active = activeOrBtn;
-                const btn = maybeBtn;
-                // save to store
-                store.set(storeKey, active ? 1 : 0);
-                // update text if btn provided
-                if (btn) btn.innerText = active ? closeLabel : openLabel;
-                
-                if (onChange) {
-                    onChange(active);
-                } else {
-                    console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
-                }
+                isActive = activeOrBtn;
+                btn = maybeBtn;
             } else {
-                // called as handler(btn) from column (rare for these toggles) - just toggle state
-                const btn = activeOrBtn;
-                const cur = store.get(storeKey, 0) === 1;
-                const will = !cur;
-                store.set(storeKey, will ? 1 : 0);
-                if (btn) {
-                    btn.innerText = will ? closeLabel : openLabel;
-                    btn.style.borderStyle = will ? 'inset' : 'outset';
-                }
+                btn = activeOrBtn;
+                // 修正：这里不再反转状态！
+                // 因为 GroupPopup 的 click handler 并没有改变 store，
+                // 它只是把 btn 传给了我们。
+                // 我们的职责是：读取当前 store -> 取反 -> 保存 -> 更新 UI。
                 
-                if (onChange) {
-                    onChange(will);
-                } else {
-                    console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
-                }
+                // 但是！如果我们在 GroupPopup 初始化时，已经根据 store 设置了 active 样式，
+                // 此时点击，我们确实应该取反。
+                
+                const current = store.get(storeKey, 0) === 1;
+                isActive = !current;
+            }
+            
+            // 保存新状态
+            store.set(storeKey, isActive ? 1 : 0);
+            
+            // 更新按钮 UI
+            if (btn) {
+                btn.innerText = isActive ? closeLabel : openLabel;
+                btn.style.borderStyle = isActive ? 'inset' : 'outset';
+            }
+            
+            // 触发回调
+            if (onChange) {
+                onChange(isActive);
+            } else {
+                console.log(`[${openLabel}] 状态：${isActive ? '已开启' : '已关闭'}`);
             }
         };
     }

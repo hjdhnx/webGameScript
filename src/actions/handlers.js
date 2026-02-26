@@ -214,38 +214,40 @@ export function toggleGroup(name) {
  */
 export function makeToggle(id, openLabel, closeLabel, storeKey, onChange) {
     return (activeOrBtn, maybeBtn) => {
-        // 兼容两种调用方式：
-        // 1) group popup calls handler(active, btn) -> active is boolean, maybeBtn is btn
-        // 2) column button calls handler(btn) -> activeOrBtn is btn
+        let btn = null;
+        let isActive = false;
+        
         if (typeof activeOrBtn === 'boolean') {
-            const active = activeOrBtn;
-            const btn = maybeBtn;
-            // save to store
-            store.set(storeKey, active ? 1 : 0);
-            // update text if btn provided
-            if (btn) btn.innerText = active ? closeLabel : openLabel;
-            
-            if (onChange) {
-                onChange(active);
-            } else {
-                console.log(`[${openLabel}] 状态：${active ? '已开启' : '已关闭'}`);
-            }
+            isActive = activeOrBtn;
+            btn = maybeBtn;
         } else {
-            // called as handler(btn) from column (rare for these toggles) - just toggle state
-            const btn = activeOrBtn;
-            const cur = store.get(storeKey, 0) === 1;
-            const will = !cur;
-            store.set(storeKey, will ? 1 : 0);
-            if (btn) {
-                btn.innerText = will ? closeLabel : openLabel;
-                btn.style.borderStyle = will ? 'inset' : 'outset';
-            }
+            btn = activeOrBtn;
+            // 修正：这里不再反转状态！
+            // 因为 GroupPopup 的 click handler 并没有改变 store，
+            // 它只是把 btn 传给了我们。
+            // 我们的职责是：读取当前 store -> 取反 -> 保存 -> 更新 UI。
             
-            if (onChange) {
-                onChange(will);
-            } else {
-                console.log(`[${openLabel}] 状态：${will ? '已开启' : '已关闭'}`);
-            }
+            // 但是！如果我们在 GroupPopup 初始化时，已经根据 store 设置了 active 样式，
+            // 此时点击，我们确实应该取反。
+            
+            const current = store.get(storeKey, 0) === 1;
+            isActive = !current;
+        }
+        
+        // 保存新状态
+        store.set(storeKey, isActive ? 1 : 0);
+        
+        // 更新按钮 UI
+        if (btn) {
+            btn.innerText = isActive ? closeLabel : openLabel;
+            btn.style.borderStyle = isActive ? 'inset' : 'outset';
+        }
+        
+        // 触发回调
+        if (onChange) {
+            onChange(isActive);
+        } else {
+            console.log(`[${openLabel}] 状态：${isActive ? '已开启' : '已关闭'}`);
         }
     };
 }
