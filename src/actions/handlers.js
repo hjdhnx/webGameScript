@@ -14,6 +14,7 @@ import { syncRemoteCommands } from '../core/remote-sync.js';
 import { CoordinatePicker } from '../ui/coordinate-picker.js';
 import { ElementPicker } from '../ui/element-picker.js';
 import { setGrayMode } from './gray-mode.js';
+import { setUnlockCopy, forceCopySelection } from './unlock-copy.js';
 
 export function toggleLog() {
     // 使用store中的状态作为主要判断依据，DOM状态作为备用
@@ -311,6 +312,17 @@ export function toggleGrayMode(enable) {
     setGrayMode(enable);
     const label = enable ? '开灰度' : '关灰度';
     Logger.append(`[开关集] ${label}`);
+}
+
+export function toggleUnlockCopy(enable) {
+    setUnlockCopy(enable);
+    const label = enable ? '开复制' : '关复制';
+    Logger.append(`[开关集] ${label}`);
+}
+
+export function copySelection() {
+    forceCopySelection();
+    Logger.append(`[工具] 强制复制选中文本`);
 }
 
 export async function configSafeCode() {

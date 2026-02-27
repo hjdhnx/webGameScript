@@ -2,6 +2,8 @@
 import { h } from '../utils/dom.js';
 import { Toast } from './toast.js';
 import { copyWithGreasemonkey } from '../utils/debug-helpers.js';
+import { store } from '../utils/store.js';
+import { generateSimpleSelector, generateFullPathSelector } from '../utils/selector-generator.js';
 
 export const ElementPicker = (() => {
     let active = false;
@@ -126,34 +128,13 @@ export const ElementPicker = (() => {
 
     // 生成唯一的 CSS 选择器
     function generateSelector(el) {
-        if (el.id) return `#${el.id}`;
-        
-        const path = [];
-        let current = el;
-        
-        while (current && current.nodeType === Node.ELEMENT_NODE) {
-            let selector = current.nodeName.toLowerCase();
-            
-            if (current.id) {
-                selector = '#' + current.id;
-                path.unshift(selector);
-                break;
-            } else {
-                let sib = current, nth = 1;
-                while (sib = sib.previousElementSibling) {
-                    if (sib.nodeName.toLowerCase() == selector)
-                       nth++;
-                }
-                if (nth != 1)
-                    selector += ":nth-of-type("+nth+")";
-            }
-            path.unshift(selector);
-            current = current.parentNode;
-            
-            // 限制长度，避免生成的选择器过长
-            if (path.length >= 4) break; 
+        // 0: simple (default), 1: full
+        const mode = store.get('element_picker_mode', 0);
+        if (mode === 0) {
+            return generateSimpleSelector(el);
+        } else {
+            return generateFullPathSelector(el);
         }
-        return path.join(" > ");
     }
 
     return { start, stop };

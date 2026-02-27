@@ -39,6 +39,7 @@ const ACTIONS = [
     
     // 第4列：定时任务、推送文本
     { id: 'schedule-open', label: '定时任务', column: 4, handler: Handlers.toggleScheduleManager },
+    { id: 'force-copy', label: '复制选中', column: 4, handler: Handlers.copySelection },
     
     // 第5列：配置集、开关集、指令集
     { id: 'cfg-open', label: '配置集', column: 5, handler: Handlers.toggleGroup('配置集') },
@@ -70,6 +71,14 @@ const ACTIONS = [
         storeKey: 'gray_mode_enabled',
         handler: Handlers.makeToggle('gray-mode', '开灰度', '关灰度', 'gray_mode_enabled', (enabled) => Handlers.toggleGrayMode(enabled))
     },
+    {
+        id: 'unlock-copy',
+        label: '开复制',
+        group: '开关集',
+        isToggle: true,
+        storeKey: 'unlock_copy_enabled',
+        handler: Handlers.makeToggle('unlock-copy', '开复制', '关复制', 'unlock_copy_enabled', (enabled) => Handlers.toggleUnlockCopy(enabled))
+    },
 
     // 分组：配置集
     {
@@ -97,6 +106,14 @@ const ACTIONS = [
         isToggle: true,
         storeKey: 'remote_commands_enabled',
         handler: Handlers.makeToggle('cfg-remote-enable', '启用远程指令', '禁用远程指令', 'remote_commands_enabled')
+    },
+    {
+        id: 'cfg-picker-mode',
+        label: '模式: 简易',
+        group: '配置集',
+        isToggle: true,
+        storeKey: 'element_picker_mode',
+        handler: Handlers.makeToggle('cfg-picker-mode', '模式: 简易', '模式: 全路径', 'element_picker_mode')
     },
     // 组内按钮：推送文本
     {
